@@ -15,9 +15,6 @@ import {
 
 const IDS = [
   'hero',
-  'statusDot',
-  'statusText',
-  'startText',
   'editStart',
   'tapout',
   'heroLabel',
@@ -25,7 +22,6 @@ const IDS = [
   'heroSub',
   'trackFill',
   'lap',
-  'lapNote',
   'shoePill',
   'shoeKicker',
   'shoeName',
@@ -77,12 +73,7 @@ export function createUI(root = document) {
   }
 
   function render(view) {
-    const live = view.phase === 'running';
-
-    refs.statusDot.className = `dot dot--${view.phase}`;
-    refs.statusText.textContent = live ? 'Live' : view.phase === 'prestart' ? 'Starts soon' : 'Ended';
-    refs.startText.textContent = `Start ${formatDay(view.start)} · ${formatTime(view.start)}`;
-    refs.tapout.hidden = !live;
+    refs.tapout.hidden = view.phase !== 'running';
     refs.hero.classList.toggle('is-ended', view.phase === 'ended');
 
     refs.heroLabel.textContent =
@@ -131,33 +122,23 @@ export function createUI(root = document) {
     if (view.phase === 'prestart') {
       refs.lap.disabled = true;
       setHtml(refs.lap, 'lap', 'Finish lap <span class="lap-add">+3 mi</span>');
-      refs.lapNote.textContent = `First lap due ${formatTime(view.start)}.`;
     } else if (view.phase === 'running') {
       if (view.lapThisHour) {
         refs.lap.disabled = true;
         refs.lap.classList.add('lap--banked');
-        const pair = shoeNameOf(view, view.lapThisHour.shoeId);
         setHtml(
           refs.lap,
           'lap',
           `Lap banked <span class="lap-add">${formatMmSs(view.lapThisHour.ms)}</span>`,
         );
-        refs.lapNote.textContent = `Next hour in ${formatMmSs(view.msToHourEnd)}.${
-          pair ? ` · ${pair}` : ''
-        }`;
       } else {
         refs.lap.disabled = false;
-        const pair = shoeNameOf(view, view.activeShoeId);
         setHtml(refs.lap, 'lap', 'Finish lap <span class="lap-add">+3 mi</span>');
-        refs.lapNote.textContent = pair
-          ? `${MILES_PER_LAP} miles in ${pair}, then finish.`
-          : `${MILES_PER_LAP} miles, then hit finish.`;
       }
     } else {
       refs.lap.disabled = false;
       refs.lap.classList.add('lap--ghost');
       setHtml(refs.lap, 'lap', 'Start a new run');
-      refs.lapNote.textContent = 'Tap out is final — this clears the board.';
     }
 
     renderShoe(view);
