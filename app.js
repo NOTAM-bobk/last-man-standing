@@ -2,17 +2,26 @@ import {
   CADENCE_MS,
   MILES_PER_LAP,
   STORAGE_KEY,
+  addToHistory,
+  archivedRun,
   autoShoeId,
   createState,
   derive,
+  formatDay,
   formatDuration,
   formatMmSs,
+  formatMoney,
   formatTime,
   fromInputValue,
+  loadHistory,
   loadState,
+  loadTheme,
   newShoeId,
   nextSaturdayStart,
+  reminderMinute,
+  saveHistory,
   saveState,
+  saveTheme,
   shoeStats,
   toInputValue,
 } from './js/state.js';
@@ -20,18 +29,21 @@ import { createUI } from './js/ui.js';
 import { lapTips } from './js/tips.js';
 
 let state = loadState();
+let history = loadHistory();
 const ui = createUI(document);
 const { refs } = ui;
 
 const NAME_LIMIT = 28;
 const ALARM_WINDOW_MS = 3 * 60 * 1000;
 const ALARM_AUTO_STOP_MS = 30_000;
+const REMINDER_KEY = 'lms.reminders';
 let shoeMode = { renamingId: null, confirmId: null, focus: null };
 
 function render() {
   const view = derive(state, Date.now());
   ui.render(view);
   checkAlarm(view);
+  checkReminders(view);
 }
 
 function commit(next) {
@@ -45,6 +57,157 @@ function escapeHtml(value) {
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
   );
+}
+
+/* theme ------------------------------------------------------------------ */
+
+function applyTheme(theme) {
+  const next = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', next === 'light' ? '#f4f1ea' : '#0b0b0e');
+}
+
+/* past runs -------------------------------------------------------------- */
+
+function archiveCurrent() {
+  if (state.laps.length === 0) return;
+  history = addToHistory(history, archivedRun(state));
+  saveHistory(history);
+}
+
+function historyMarkup() {
+  if (!history.length) {
+    return '<p class="hint">No saved runs yet. A run lands here when you tap out, start the next one, or change the start time.</p>';
+  }
+  return `<ul class="history">${history
+    .map(
+      (run) => `<li class="history-item">
+        <span class="history-top">
+          <span class="history-when">${escapeHtml(formatDay(run.start))} · ${escapeHtml(
+            formatTime(run.start),
+          )}</span>
+          ${run.prize > 0 ? `<span class="history-prize">${escapeHtml(formatMoney(run.prize))}</span>` : ''}
+        </span>
+        <span class="history-meta">${run.laps} lap${run.laps === 1 ? '' : 's'} · ${run.miles.toFixed(
+          1,
+        )} mi · ${formatDuration(run.totalMs)}${run.endedAt ? '' : ' · not finished'}</span>
+      </li>`,
+    )
+    .join('')}</ul>`;
+}
+
+/* reminders -------------------------------------------------------------- */
+
+let reminderKey = null;
+
+function reminderPref() {
+  try {
+    return localStorage.getItem(REMINDER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setReminderPref(on) {
+  try {
+    localStorage.setItem(REMINDER_KEY, on ? '1' : '0');
+  } catch {
+    // A private-mode block only loses the preference.
+  }
+}
+
+function notificationsGranted() {
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
+function requestNotifyPermission() {
+  if (typeof Notification === 'undefined') return Promise.resolve('unsupported');
+  if (Notification.permission !== 'default') return Promise.resolve(Notification.permission);
+  return new Promise((resolve) => {
+    const fallback = () => resolve(Notification.permission);
+    try {
+      const result = Notification.requestPermission(fallback);
+      if (result && typeof result.then === 'function') result.then(resolve, fallback);
+    } catch {
+      fallback();
+    }
+  });
+}
+
+function reminderCopy() {
+  if (typeof Notification === 'undefined') {
+    return {
+      text: 'Notifications unavailable',
+      hint: 'On iPhone, add the app to your Home Screen first, then reminders can be switched on.',
+      on: false,
+    };
+  }
+  if (reminderPref() && notificationsGranted()) {
+    return {
+      text: 'Reminders on · turn off',
+      hint: 'One notification at 5, 4, 3, 2 and 1 minute left in the hour, while the app is open.',
+      on: true,
+    };
+  }
+  if (Notification.permission === 'denied') {
+    return {
+      text: 'Notifications are blocked',
+      hint: 'Allow notifications for this site in your browser settings, then try again.',
+      on: false,
+    };
+  }
+  return {
+    text: 'Turn on lap reminders',
+    hint: 'A nudge every minute for the last five minutes of the hour. Fires while the app is open.',
+    on: false,
+  };
+}
+
+function sendReminder(view, minutesLeft) {
+  const title = minutesLeft === 1 ? 'Go now — 1 minute' : `${minutesLeft} minutes to go`;
+  const body = `Hour ${view.hourIndex + 1}: ${MILES_PER_LAP} mi before ${formatTime(
+    view.hourEnd,
+  )}. Get your shoes on.`;
+  const options = {
+    body,
+    tag: `lms-hour-${view.hourIndex}`,
+    renotify: true,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    data: { url: './' },
+  };
+
+  try {
+    const registration = navigator.serviceWorker?.getRegistration?.();
+    if (registration && typeof registration.then === 'function') {
+      registration
+        .then((reg) => (reg ? reg.showNotification(title, options) : new Notification(title, options)))
+        .catch(() => new Notification(title, options));
+      return;
+    }
+    new Notification(title, options);
+  } catch {
+    // Notifications are a bonus; the on-screen alarm still fires.
+  }
+}
+
+function checkReminders(view) {
+  if (view.phase !== 'running') {
+    reminderKey = null;
+    return;
+  }
+  const minutesLeft = reminderMinute(view.msToHourEnd);
+  if (!minutesLeft) {
+    reminderKey = null;
+    return;
+  }
+  if (!reminderPref() || !notificationsGranted()) return;
+
+  const key = `${view.hourIndex}:${minutesLeft}`;
+  if (reminderKey === key) return;
+  reminderKey = key;
+  sendReminder(view, minutesLeft);
 }
 
 /* alarm ------------------------------------------------------------------ */
@@ -311,6 +474,7 @@ function tapOut() {
             prize: state.prize,
           });
           saveState(state);
+          archiveCurrent();
           stopAlarm();
           ui.closeSheet();
           render();
@@ -321,6 +485,7 @@ function tapOut() {
 }
 
 function startNewRun() {
+  archiveCurrent();
   state = createState(nextSaturdayStart(Date.now()), {
     shoes: state.shoes,
     rotation: state.rotation,
@@ -333,21 +498,43 @@ function startNewRun() {
 
 function editStart() {
   const existing = state.laps.length;
+  const theme = loadTheme();
+  const reminders = reminderCopy();
   const content = `
     <label class="field-label" for="startInput">Start date &amp; time</label>
     <input class="field" id="startInput" type="datetime-local" step="60" value="${toInputValue(
       state.start,
     )}" />
     <button class="preset" id="presetSat" type="button">Next Saturday · 5:00 am</button>
+
     <label class="field-label" for="prizeInput">Prize money</label>
     <input class="field" id="prizeInput" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="${
       state.prize ? state.prize : ''
     }" />
     <p class="hint" id="startHint">${
       existing
-        ? `Saving clears the ${existing} lap${existing === 1 ? '' : 's'} already on the board.`
+        ? `Saving clears the ${existing} lap${existing === 1 ? '' : 's'} — they're kept in Past runs.`
         : 'Change it any time — the clock follows your phone.'
     }</p>
+
+    <p class="field-label" id="themeLabel">Theme</p>
+    <div class="seg seg--two" role="group" aria-labelledby="themeLabel">
+      <button class="seg-btn${theme === 'dark' ? ' is-on' : ''}" type="button" data-theme-set="dark" aria-pressed="${
+        theme === 'dark'
+      }">Dark</button>
+      <button class="seg-btn${theme === 'light' ? ' is-on' : ''}" type="button" data-theme-set="light" aria-pressed="${
+        theme === 'light'
+      }">Light</button>
+    </div>
+
+    <p class="field-label">Lap reminders</p>
+    <button class="preset${reminders.on ? ' is-on' : ''}" id="remindBtn" type="button">${escapeHtml(
+      reminders.text,
+    )}</button>
+    <p class="hint" id="remindHint">${escapeHtml(reminders.hint)}</p>
+
+    <p class="field-label">Past runs</p>
+    ${historyMarkup()}
   `;
 
   ui.openSheet({
@@ -372,6 +559,7 @@ function editStart() {
           }
           const prizeInput = refs.sheetContent.querySelector('#prizeInput');
           const prize = Math.max(0, Number(prizeInput?.value ?? 0) || 0);
+          archiveCurrent();
           state = createState(next, {
             shoes: state.shoes,
             rotation: state.rotation,
@@ -385,10 +573,50 @@ function editStart() {
     ],
   });
 
-  const preset = refs.sheetContent.querySelector('#presetSat');
-  const input = refs.sheetContent.querySelector('#startInput');
-  preset?.addEventListener('click', () => {
+  const host = refs.sheetContent;
+
+  host.querySelector('#presetSat')?.addEventListener('click', () => {
+    const input = host.querySelector('#startInput');
     if (input) input.value = toInputValue(nextSaturdayStart(Date.now()));
+  });
+
+  host.querySelectorAll('[data-theme-set]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const picked = button.dataset.themeSet;
+      if (picked !== 'light' && picked !== 'dark') return;
+      saveTheme(picked);
+      applyTheme(picked);
+      host.querySelectorAll('[data-theme-set]').forEach((other) => {
+        const on = other.dataset.themeSet === picked;
+        other.classList.toggle('is-on', on);
+        other.setAttribute('aria-pressed', String(on));
+      });
+    });
+  });
+
+  const remindButton = host.querySelector('#remindBtn');
+  const remindHint = host.querySelector('#remindHint');
+
+  const paintReminders = () => {
+    const copy = reminderCopy();
+    if (remindButton) {
+      remindButton.textContent = copy.text;
+      remindButton.classList.toggle('is-on', copy.on);
+    }
+    if (remindHint) remindHint.textContent = copy.hint;
+  };
+
+  remindButton?.addEventListener('click', async () => {
+    if (typeof Notification === 'undefined') return;
+    if (reminderPref() && notificationsGranted()) {
+      setReminderPref(false);
+      paintReminders();
+      return;
+    }
+    const permission = await requestNotifyPermission();
+    setReminderPref(permission === 'granted');
+    reminderKey = null;
+    paintReminders();
   });
 }
 
@@ -639,6 +867,8 @@ function paintLap(hour) {
 
 /* wiring --------------------------------------------------------------- */
 
+applyTheme(loadTheme());
+
 refs.lap.addEventListener('click', () => {
   const view = derive(state, Date.now());
   if (view.phase === 'ended') startNewRun();
@@ -673,9 +903,13 @@ document.addEventListener('keydown', (event) => {
 
 // Any clock source counts: tab wake, focus, bfcache restore or a sibling tab writing state.
 window.addEventListener('storage', (event) => {
-  if (event.key !== STORAGE_KEY) return;
-  state = loadState();
-  render();
+  if (event.key === STORAGE_KEY) {
+    state = loadState();
+    render();
+  } else if (event.key === 'lms.history' || event.key === 'lms.theme') {
+    history = loadHistory();
+    applyTheme(loadTheme());
+  }
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) render();
