@@ -17,6 +17,7 @@ import {
   toInputValue,
 } from './js/state.js';
 import { createUI } from './js/ui.js';
+import { lapTips } from './js/tips.js';
 
 let state = loadState();
 const ui = createUI(document);
@@ -191,6 +192,7 @@ function finishLap() {
       ],
       shoes: state.shoes,
       rotation: state.rotation,
+      prize: state.prize,
     }),
   );
 
@@ -230,6 +232,7 @@ function showLap(lap, number) {
   const pace = formatMmSs(lap.ms / MILES_PER_LAP);
   const pair = shoeStats(state).find((shoe) => shoe.id === lap.shoeId) ?? null;
   const quote = pickQuote();
+  const tips = lapTips(view, lap, pair);
 
   ui.openSheet({
     title: `Lap ${number} banked`,
@@ -261,6 +264,21 @@ function showLap(lap, number) {
           }</span>
         </div>
       </div>
+      ${
+        tips.length
+          ? `<div class="coach">
+        <p class="field-label">Coach</p>
+        <ul class="tips">
+          ${tips
+            .map(
+              (tip) =>
+                `<li class="tip"><span class="tip-kind">${escapeHtml(tip.kind)}</span><span class="tip-text">${escapeHtml(tip.text)}</span></li>`,
+            )
+            .join('')}
+        </ul>
+      </div>`
+          : ''
+      }
       <blockquote class="quote">
         <p>${escapeHtml(quote)}</p>
         <footer>David Goggins</footer>
@@ -290,6 +308,7 @@ function tapOut() {
             endedAt: Date.now(),
             shoes: state.shoes,
             rotation: state.rotation,
+            prize: state.prize,
           });
           saveState(state);
           stopAlarm();
@@ -305,6 +324,7 @@ function startNewRun() {
   state = createState(nextSaturdayStart(Date.now()), {
     shoes: state.shoes,
     rotation: state.rotation,
+    prize: state.prize,
   });
   saveState(state);
   stopAlarm();
@@ -319,6 +339,10 @@ function editStart() {
       state.start,
     )}" />
     <button class="preset" id="presetSat" type="button">Next Saturday · 5:00 am</button>
+    <label class="field-label" for="prizeInput">Prize money</label>
+    <input class="field" id="prizeInput" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="${
+      state.prize ? state.prize : ''
+    }" />
     <p class="hint" id="startHint">${
       existing
         ? `Saving clears the ${existing} lap${existing === 1 ? '' : 's'} already on the board.`
@@ -327,7 +351,7 @@ function editStart() {
   `;
 
   ui.openSheet({
-    title: 'Start time',
+    title: 'Run settings',
     content,
     actions: [
       { label: 'Cancel', variant: 'ghost', onClick: ui.closeSheet },
@@ -346,7 +370,13 @@ function editStart() {
             input?.focus();
             return;
           }
-          state = createState(next, { shoes: state.shoes, rotation: state.rotation });
+          const prizeInput = refs.sheetContent.querySelector('#prizeInput');
+          const prize = Math.max(0, Number(prizeInput?.value ?? 0) || 0);
+          state = createState(next, {
+            shoes: state.shoes,
+            rotation: state.rotation,
+            prize,
+          });
           saveState(state);
           ui.closeSheet();
           render();
