@@ -23,10 +23,14 @@ const ui = createUI(document);
 const { refs } = ui;
 
 const NAME_LIMIT = 28;
+const ALARM_WINDOW_MS = 3 * 60 * 1000;
+const ALARM_AUTO_STOP_MS = 30_000;
 let shoeMode = { renamingId: null, confirmId: null, focus: null };
 
 function render() {
-  ui.render(derive(state, Date.now()));
+  const view = derive(state, Date.now());
+  ui.render(view);
+  checkAlarm(view);
 }
 
 function commit(next) {
@@ -40,6 +44,133 @@ function escapeHtml(value) {
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
   );
+}
+
+/* alarm ------------------------------------------------------------------ */
+
+let audioCtx = null;
+let alarmHour = null;
+let alarmStopTimer = null;
+let beepTimer = null;
+
+function audio() {
+  const AudioCtor = window.AudioContext ?? window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  if (!audioCtx) audioCtx = new AudioCtor();
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+
+function beep() {
+  const ctx = audio();
+  if (!ctx || ctx.state !== 'running') return;
+  const start = ctx.currentTime;
+  [
+    { at: 0, hz: 880 },
+    { at: 0.2, hz: 1174 },
+  ].forEach(({ at, hz }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = hz;
+    gain.gain.setValueAtTime(0.0001, start + at);
+    gain.gain.exponentialRampToValueAtTime(0.09, start + at + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + at + 0.18);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(start + at);
+    osc.stop(start + at + 0.2);
+  });
+}
+
+function stopAlarm() {
+  clearInterval(beepTimer);
+  clearTimeout(alarmStopTimer);
+  beepTimer = null;
+  alarmStopTimer = null;
+  refs.alarm.hidden = true;
+}
+
+function startAlarm() {
+  if (!refs.alarm.hidden) return;
+  refs.alarm.hidden = false;
+  beep();
+  beepTimer = setInterval(beep, 2400);
+  alarmStopTimer = setTimeout(stopAlarm, ALARM_AUTO_STOP_MS);
+}
+
+function checkAlarm(view) {
+  if (view.phase !== 'running') {
+    if (!refs.alarm.hidden) stopAlarm();
+    return;
+  }
+
+  if (view.msToHourEnd > 0 && view.msToHourEnd <= ALARM_WINDOW_MS) {
+    if (alarmHour !== view.hourIndex) {
+      alarmHour = view.hourIndex;
+      startAlarm();
+    }
+    if (!refs.alarm.hidden) {
+      refs.alarmSub.textContent = `${formatMmSs(view.msToHourEnd)} left in hour ${view.hourIndex + 1}`;
+    }
+  } else if (!refs.alarm.hidden) {
+    stopAlarm();
+  }
+}
+
+/* confetti --------------------------------------------------------------- */
+
+function confetti() {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'confetti';
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  document.body.append(canvas);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    canvas.remove();
+    return;
+  }
+  ctx.scale(dpr, dpr);
+
+  const colors = ['#c7f64b', '#f4f1ea', '#ff6a3d', '#8b879a'];
+  const pieces = Array.from({ length: 80 }, () => ({
+    x: window.innerWidth / 2 + (Math.random() - 0.5) * window.innerWidth * 0.6,
+    y: -20 - Math.random() * 120,
+    vx: (Math.random() - 0.5) * 5,
+    vy: 2.5 + Math.random() * 4,
+    size: 5 + Math.random() * 7,
+    rot: Math.random() * Math.PI,
+    spin: (Math.random() - 0.5) * 0.35,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+
+  let frame = 0;
+  const draw = () => {
+    if (!canvas.isConnected) return;
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (const piece of pieces) {
+      piece.x += piece.vx;
+      piece.y += piece.vy;
+      piece.vy += 0.05;
+      piece.rot += piece.spin;
+      ctx.save();
+      ctx.translate(piece.x, piece.y);
+      ctx.rotate(piece.rot);
+      ctx.fillStyle = piece.color;
+      ctx.fillRect(-piece.size / 2, -piece.size / 4, piece.size, piece.size / 2);
+      ctx.restore();
+    }
+    frame += 1;
+    if (frame < 120) requestAnimationFrame(draw);
+    else canvas.remove();
+  };
+  requestAnimationFrame(draw);
+  // rAF pauses in a background tab, so a timer guarantees the canvas goes away.
+  setTimeout(() => canvas.remove(), 2400);
 }
 
 function finishLap() {
@@ -65,6 +196,7 @@ function finishLap() {
 
   const lap = state.laps[state.laps.length - 1];
   ui.flash();
+  confetti();
   showLap(lap, state.laps.length);
 }
 
@@ -160,6 +292,7 @@ function tapOut() {
             rotation: state.rotation,
           });
           saveState(state);
+          stopAlarm();
           ui.closeSheet();
           render();
         },
@@ -174,6 +307,7 @@ function startNewRun() {
     rotation: state.rotation,
   });
   saveState(state);
+  stopAlarm();
   render();
 }
 
@@ -484,6 +618,11 @@ refs.lap.addEventListener('click', () => {
 refs.tapout.addEventListener('click', tapOut);
 refs.editStart.addEventListener('click', editStart);
 refs.shoePill.addEventListener('click', openShoes);
+refs.alarmDisarm.addEventListener('click', stopAlarm);
+
+// Browsers only start audio after a gesture, so unlock on the first one.
+window.addEventListener('pointerdown', () => audio(), { once: true });
+window.addEventListener('keydown', () => audio(), { once: true });
 
 refs.rail.addEventListener('click', (event) => {
   const chip = event.target instanceof Element ? event.target.closest('.chip') : null;
