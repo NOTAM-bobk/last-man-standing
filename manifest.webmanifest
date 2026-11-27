@@ -1,7 +1,7 @@
 {
   "name": "Last Man Standing",
   "short_name": "Last Man",
-  "description": "Three miles every hour, on the hour. A countdown, a lap button and your standing totals — works offline.",
+  "description": "A countdown, a lap button, shoe mileage and your standing totals — works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

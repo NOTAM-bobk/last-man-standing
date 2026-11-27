@@ -6,7 +6,7 @@
     <title>Last Man Standing — hourly lap tracker</title>
     <meta
       name="description"
-      content="Three miles every hour, on the hour. A countdown, a lap button and your standing totals — works offline."
+      content="A countdown, a lap button, shoe mileage and your standing totals — works offline."
     />
     <meta name="theme-color" content="#0B0B0E" />
     <meta name="color-scheme" content="dark" />
@@ -23,16 +23,11 @@
     <main class="app">
       <header class="topbar">
         <h1 class="wordmark" aria-label="Last man standing">Last man<span aria-hidden="true">Standing</span></h1>
-        <button class="tapout" id="tapout" type="button" hidden>Tap out</button>
+        <div class="topbar-actions">
+          <button class="edit" id="editStart" type="button" aria-label="Edit start time">Edit</button>
+          <button class="tapout" id="tapout" type="button" hidden>Tap out</button>
+        </div>
       </header>
-
-      <div class="meta">
-        <span class="dot dot--prestart" id="statusDot" aria-hidden="true"></span>
-        <span id="statusText">Starts soon</span>
-        <span class="meta-sep" aria-hidden="true">·</span>
-        <span id="startText">Sat 28 Nov · 5:00 am</span>
-        <button class="edit" id="editStart" type="button" aria-label="Edit start time">Edit</button>
-      </div>
 
       <section class="hero" id="hero" aria-label="Countdown">
         <span class="hero-label" id="heroLabel">Starts in</span>
@@ -42,7 +37,6 @@
       </section>
 
       <button class="lap" id="lap" type="button">Finish lap <span class="lap-add">+3 mi</span></button>
-      <p class="lap-note" id="lapNote" aria-live="polite"></p>
 
       <button class="shoe" id="shoePill" type="button">
         <span class="shoe-text">
