@@ -22,27 +22,27 @@
   <body>
     <main class="app">
       <header class="topbar">
-        <h1 class="wordmark">Last man<span>Standing</span></h1>
+        <h1 class="wordmark" aria-label="Last man standing">Last man<span aria-hidden="true">Standing</span></h1>
         <button class="tapout" id="tapout" type="button" hidden>Tap out</button>
       </header>
 
       <div class="meta">
-        <span class="dot dot--prestart" id="statusDot"></span>
+        <span class="dot dot--prestart" id="statusDot" aria-hidden="true"></span>
         <span id="statusText">Starts soon</span>
-        <span class="meta-sep">·</span>
+        <span class="meta-sep" aria-hidden="true">·</span>
         <span id="startText">Sat 28 Nov · 5:00 am</span>
-        <button class="edit" id="editStart" type="button">Edit</button>
+        <button class="edit" id="editStart" type="button" aria-label="Edit start time">Edit</button>
       </div>
 
       <section class="hero" id="hero" aria-label="Countdown">
         <span class="hero-label" id="heroLabel">Starts in</span>
-        <div class="clock" id="clock">00:00:00</div>
+        <div class="clock" id="clock" role="timer">00:00:00</div>
         <div class="hero-sub" id="heroSub">Sat 28 Nov · 5:00 am</div>
         <div class="track" aria-hidden="true"><div class="track-fill" id="trackFill"></div></div>
       </section>
 
       <button class="lap" id="lap" type="button">Finish lap <span class="lap-add">+3 mi</span></button>
-      <p class="lap-note" id="lapNote"></p>
+      <p class="lap-note" id="lapNote" aria-live="polite"></p>
 
       <section class="stats" aria-label="Totals">
         <div class="stat stat--distance">
@@ -64,7 +64,7 @@
         <div class="rail" id="rail"></div>
       </section>
 
-      <footer class="foot">3 miles every hour, on the hour · 5:00 am start</footer>
+      <footer class="foot">3 miles every hour, on the hour</footer>
     </main>
 
     <div class="scrim" id="scrim" hidden>

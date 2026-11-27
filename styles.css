@@ -7,10 +7,10 @@
   --ink: #f4f1ea;
   --soft: #b9b6c2;
   --muted: #8d8a97;
-  --dim: #6f6c7a;
+  --dim: #8b879a;
   --accent: #c7f64b;
-  --violet: #b7a6ff;
   --coral: #ff6a3d;
+  --coral-ink: #ff8a63;
   --shadow: 5px 5px 0 rgba(244, 241, 234, 0.09);
   --shadow-ink: 6px 6px 0 #000;
   --display: ui-sans-serif, system-ui, -apple-system, 'Segoe UI Variable Display', 'Segoe UI', Roboto,
@@ -26,6 +26,18 @@
   display: none !important;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body {
   margin: 0;
@@ -36,7 +48,6 @@ body {
   padding: calc(18px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
     calc(22px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
   background-color: var(--bg);
-  background-image: radial-gradient(120% 55% at 50% -12%, rgba(199, 246, 75, 0.1), transparent 62%);
   color: var(--ink);
   font-family: var(--body);
   -webkit-font-smoothing: antialiased;
@@ -83,14 +94,14 @@ body {
 .tapout {
   flex: 0 0 auto;
   margin-top: 2px;
-  padding: 9px 14px;
+  min-height: 32px;
+  padding: 8px 13px;
   border: 1.5px solid rgba(255, 106, 61, 0.45);
-  border-radius: 999px;
+  border-radius: 12px;
   background: rgba(255, 106, 61, 0.08);
-  color: var(--coral);
-  font: 600 11px/1 var(--body);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  color: var(--coral-ink);
+  font: 600 11.5px/1 var(--body);
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition:
     transform 0.12s ease,
@@ -127,14 +138,14 @@ body {
 
 .edit {
   margin-left: auto;
-  padding: 6px 11px;
+  min-height: 30px;
+  padding: 7px 12px;
   border: 1.5px solid var(--line);
-  border-radius: 999px;
+  border-radius: 12px;
   background: transparent;
   color: var(--soft);
-  font: 600 10px/1 var(--body);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font: 600 11.5px/1 var(--body);
+  letter-spacing: 0.01em;
   cursor: pointer;
 }
 
@@ -184,19 +195,9 @@ body {
   box-shadow: var(--shadow);
 }
 
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: auto -30% -62% -30%;
-  height: 120px;
-  background: radial-gradient(50% 100% at 50% 0%, rgba(199, 246, 75, 0.1), transparent 70%);
-  pointer-events: none;
-}
-
 .hero-label {
-  font: 600 10px/1 var(--body);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font: 600 11px/1 var(--body);
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -240,11 +241,13 @@ body {
 }
 
 .track-fill {
-  width: 0;
+  width: 100%;
   height: 100%;
   border-radius: 999px;
   background: var(--accent);
-  transition: width 0.3s linear;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s linear;
 }
 
 .hero.is-ended .track-fill {
@@ -329,7 +332,7 @@ body {
 /* stats */
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1.25fr 1fr 1fr;
   gap: 9px;
 }
 
@@ -345,26 +348,9 @@ body {
   box-shadow: var(--shadow);
 }
 
-.stat::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.stat--distance::before {
-  background: var(--accent);
-}
-
-.stat--run::before {
-  background: var(--violet);
-}
-
 .stat-label {
-  font: 600 9px/1 var(--body);
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  font: 500 10.5px/1 var(--body);
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -386,6 +372,10 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.stat--distance .stat-num {
+  font-size: clamp(23px, 6.4vw, 27px);
 }
 
 .stat.is-pop {
@@ -416,9 +406,8 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font: 600 9.5px/1 var(--body);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font: 500 11px/1 var(--body);
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -501,10 +490,11 @@ body {
 
 .foot {
   margin-top: 4px;
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  color: #5f5c6a;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: var(--dim);
   text-align: center;
+  text-wrap: pretty;
 }
 
 /* sheet */
@@ -515,6 +505,7 @@ body {
   display: grid;
   place-items: center;
   padding: 20px;
+  overscroll-behavior: contain;
   background: rgba(5, 5, 8, 0.72);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
@@ -546,9 +537,9 @@ body {
   margin: 0 0 8px;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
+  font-size: 21px;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .sheet p {
@@ -568,12 +559,11 @@ body {
 .sheet-btn {
   min-height: 52px;
   border: 2px solid var(--line);
-  border-radius: 999px;
+  border-radius: 18px;
   background: transparent;
   color: var(--ink);
-  font: 700 13px/1 var(--display);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font: 600 14px/1 var(--display);
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition:
     transform 0.1s ease,
@@ -594,15 +584,14 @@ body {
 .sheet-btn--danger {
   border-color: rgba(255, 106, 61, 0.55);
   background: rgba(255, 106, 61, 0.12);
-  color: var(--coral);
+  color: var(--coral-ink);
 }
 
 .field-label {
   display: block;
   margin: 16px 0 7px;
-  font: 600 9.5px/1 var(--body);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font: 500 11px/1 var(--body);
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -624,15 +613,15 @@ body {
 
 .preset {
   width: 100%;
+  min-height: 40px;
   margin-top: 9px;
   padding: 11px;
   border: 1.5px dashed #3a3a46;
-  border-radius: 999px;
+  border-radius: 14px;
   background: transparent;
   color: var(--soft);
-  font: 600 11px/1 var(--body);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font: 600 12px/1 var(--body);
+  letter-spacing: 0.01em;
   cursor: pointer;
 }
 
