@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Last Man Standing — hourly lap tracker</title>
+    <meta
+      name="description"
+      content="Three miles every hour, on the hour. A countdown, a lap button and your standing totals — works offline."
+    />
+    <meta name="theme-color" content="#0B0B0E" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Last Man" />
+    <link rel="preload" href="./fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1 class="wordmark">Last man<span>Standing</span></h1>
+        <button class="tapout" id="tapout" type="button" hidden>Tap out</button>
+      </header>
+
+      <div class="meta">
+        <span class="dot dot--prestart" id="statusDot"></span>
+        <span id="statusText">Starts soon</span>
+        <span class="meta-sep">·</span>
+        <span id="startText">Sat 28 Nov · 5:00 am</span>
+        <button class="edit" id="editStart" type="button">Edit</button>
+      </div>
+
+      <section class="hero" id="hero" aria-label="Countdown">
+        <span class="hero-label" id="heroLabel">Starts in</span>
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="hero-sub" id="heroSub">Sat 28 Nov · 5:00 am</div>
+        <div class="track" aria-hidden="true"><div class="track-fill" id="trackFill"></div></div>
+      </section>
+
+      <button class="lap" id="lap" type="button">Finish lap <span class="lap-add">+3 mi</span></button>
+      <p class="lap-note" id="lapNote"></p>
+
+      <section class="stats" aria-label="Totals">
+        <div class="stat stat--distance">
+          <span class="stat-label">Distance</span>
+          <strong class="stat-num" id="statDistance">0.0<span class="unit">mi</span></strong>
+        </div>
+        <div class="stat stat--run">
+          <span class="stat-label">Run time</span>
+          <strong class="stat-num" id="statRun">0m</strong>
+        </div>
+        <div class="stat stat--total">
+          <span class="stat-label">Total time</span>
+          <strong class="stat-num" id="statTotal">0m</strong>
+        </div>
+      </section>
+
+      <section class="rail-wrap" id="railWrap" aria-label="Hour by hour" hidden>
+        <div class="rail-head"><span>Hour by hour</span><span id="railCount">0 laps</span></div>
+        <div class="rail" id="rail"></div>
+      </section>
+
+      <footer class="foot">3 miles every hour, on the hour · 5:00 am start</footer>
+    </main>
+
+    <div class="scrim" id="scrim" hidden>
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <h2 id="sheetTitle"></h2>
+        <p id="sheetBody"></p>
+        <div class="sheet-content" id="sheetContent"></div>
+        <div class="sheet-actions" id="sheetActions"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
