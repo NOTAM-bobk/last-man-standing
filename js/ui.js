@@ -26,6 +26,10 @@ const IDS = [
   'trackFill',
   'lap',
   'lapNote',
+  'shoePill',
+  'shoeKicker',
+  'shoeName',
+  'shoeMeta',
   'statDistance',
   'statRun',
   'statTotal',
@@ -132,16 +136,22 @@ export function createUI(root = document) {
       if (view.lapThisHour) {
         refs.lap.disabled = true;
         refs.lap.classList.add('lap--banked');
+        const pair = shoeNameOf(view, view.lapThisHour.shoeId);
         setHtml(
           refs.lap,
           'lap',
           `Lap banked <span class="lap-add">${formatMmSs(view.lapThisHour.ms)}</span>`,
         );
-        refs.lapNote.textContent = `Next hour in ${formatMmSs(view.msToHourEnd)}.`;
+        refs.lapNote.textContent = `Next hour in ${formatMmSs(view.msToHourEnd)}.${
+          pair ? ` · ${pair}` : ''
+        }`;
       } else {
         refs.lap.disabled = false;
+        const pair = shoeNameOf(view, view.activeShoeId);
         setHtml(refs.lap, 'lap', 'Finish lap <span class="lap-add">+3 mi</span>');
-        refs.lapNote.textContent = `${MILES_PER_LAP} miles, then hit finish.`;
+        refs.lapNote.textContent = pair
+          ? `${MILES_PER_LAP} miles in ${pair}, then finish.`
+          : `${MILES_PER_LAP} miles, then hit finish.`;
       }
     } else {
       refs.lap.disabled = false;
@@ -149,6 +159,8 @@ export function createUI(root = document) {
       setHtml(refs.lap, 'lap', 'Start a new run');
       refs.lapNote.textContent = 'Tap out is final — this clears the board.';
     }
+
+    renderShoe(view);
 
     setHtml(
       refs.statDistance,
@@ -169,13 +181,49 @@ export function createUI(root = document) {
     renderRail(view);
   }
 
+  function shoeNameOf(view, id) {
+    if (!id) return null;
+    return view.shoes.find((shoe) => shoe.id === id)?.name ?? null;
+  }
+
+  function renderShoe(view) {
+    const active = view.shoes.find((shoe) => shoe.id === view.activeShoeId) ?? null;
+    const name = active ? active.name : view.shoes.length ? 'Pick a pair' : 'Add a pair';
+    const kicker = view.lapThisHour ? 'Up next' : 'On your feet';
+
+    if (refs.shoeKicker.textContent !== kicker) refs.shoeKicker.textContent = kicker;
+    if (refs.shoeName.textContent !== name) refs.shoeName.textContent = name;
+
+    let meta;
+    if (!view.shoes.length) {
+      meta = 'Track mileage per pair';
+    } else {
+      const used = active ? view.shoeUse[active.id] ?? 0 : 0;
+      const miles = (used * MILES_PER_LAP).toFixed(1);
+      const next = view.shoes.find((shoe) => shoe.id === view.nextShoeId);
+      meta = `${used} lap${used === 1 ? '' : 's'} · ${miles} mi${
+        view.pinnedShoeId ? ' · pinned' : next && next.id !== view.activeShoeId ? ` · next ${next.name}` : ''
+      }`;
+    }
+    if (refs.shoeMeta.textContent !== meta) refs.shoeMeta.textContent = meta;
+
+    const label = active
+      ? `Shoe: ${active.name}`
+      : view.shoes.length
+        ? 'Shoe: pick a pair'
+        : 'Shoe: add a pair';
+    if (refs.shoePill.getAttribute('aria-label') !== label) refs.shoePill.setAttribute('aria-label', label);
+  }
+
   function renderRail(view) {
     const visible = view.hourIndex >= 0;
     refs.railWrap.hidden = !visible;
     if (!visible) return;
 
     const lapHours = view.laps.map((lap) => lap.hour).join(',');
-    const signature = `${view.start}|${view.hourIndex}|${lapHours}|${view.phase}|${view.firstHour}`;
+    const lapShoes = view.laps.map((lap) => lap.shoeId ?? '').join(',');
+    const shoeNames = view.shoes.map((shoe) => `${shoe.id}:${shoe.name}`).join('|');
+    const signature = `${view.start}|${view.hourIndex}|${lapHours}|${lapShoes}|${shoeNames}|${view.phase}|${view.firstHour}`;
     if (seen.rail !== signature) {
       seen.rail = signature;
       const fragment = root.createDocumentFragment();
@@ -189,9 +237,18 @@ export function createUI(root = document) {
         const hourStart = view.start + hour * CADENCE_MS;
         const lap = view.laps.find((entry) => entry.hour === hour);
         const isNow = view.phase === 'running' && hour === view.hourIndex;
-        const chip = root.createElement('div');
+        const pair = lap ? shoeNameOf(view, lap.shoeId) : null;
+        const chip = root.createElement(lap ? 'button' : 'span');
         chip.className = `chip ${isNow ? 'chip--now' : lap ? 'chip--done' : 'chip--missed'}`;
-        const chipState = isNow ? 'in progress' : lap ? `${formatDuration(lap.ms)} lap` : 'no lap';
+        if (lap) {
+          chip.type = 'button';
+          chip.dataset.hour = String(hour);
+        }
+        const chipState = isNow
+          ? 'in progress'
+          : lap
+            ? `${formatDuration(lap.ms)} lap${pair ? `, ${pair}` : ''}`
+            : 'no lap';
         chip.innerHTML = `<span class="chip-dot" aria-hidden="true"></span><span class="chip-time" aria-hidden="true">${formatHourShort(hourStart)}</span><span class="sr-only">${formatTime(hourStart)}, ${chipState}</span>`;
         chip.title = `${formatTime(hourStart)} — ${chipState}`;
         fragment.append(chip);
