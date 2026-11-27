@@ -51,13 +51,24 @@ export function defaultRotation() {
   return { every: 1, pinnedShoeId: null };
 }
 
-export function createState(startMs, { laps = [], endedAt = null, shoes = [], rotation } = {}) {
+// Prize money is a dollar amount, cents included, never negative.
+function cleanPrize(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.min(1_000_000_000, Math.round(amount * 100) / 100);
+}
+
+export function createState(
+  startMs,
+  { laps = [], endedAt = null, shoes = [], rotation, prize = 0 } = {},
+) {
   return {
     v: STATE_VERSION,
     start: startMs,
     laps,
     endedAt,
     shoes,
+    prize: cleanPrize(prize),
     rotation: rotation ? { ...defaultRotation(), ...rotation } : defaultRotation(),
   };
 }
@@ -128,6 +139,7 @@ export function sanitize(value) {
     laps,
     endedAt,
     shoes,
+    prize: cleanPrize(value.prize),
     rotation: { every, pinnedShoeId: pinned },
   };
 }
@@ -243,6 +255,7 @@ export function derive(state, nowMs = Date.now()) {
     msToStart,
     msToHourEnd,
     hourProgress,
+    prize: state.prize ?? 0,
     shoes,
     rotation,
     pinnedShoeId,
