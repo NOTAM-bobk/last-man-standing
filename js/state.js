@@ -1,9 +1,12 @@
 // Schedule math, shoe rotation, persistence and formatting for the tracker.
-// Everything here is pure except loadState/saveState, which touch localStorage.
+// Everything here is pure except the load/save helpers, which touch localStorage.
 
 export const STATE_VERSION = 2;
 export const STORAGE_KEY = 'lms.v2';
 export const LEGACY_KEY = 'lms.v1';
+export const THEME_KEY = 'lms.theme';
+export const HISTORY_KEY = 'lms.history';
+export const HISTORY_LIMIT = 25;
 export const CADENCE_MS = 60 * 60 * 1000;
 export const MILES_PER_LAP = 3;
 export const MAX_EVERY = 4;
@@ -173,6 +176,95 @@ export function saveState(state) {
   }
 }
 
+/* theme ------------------------------------------------------------------ */
+
+export function loadTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+export function saveTheme(theme) {
+  const next = theme === 'light' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, next);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* past runs -------------------------------------------------------------- */
+
+// A finished run, rolled up to the numbers worth keeping in a list.
+export function archivedRun(state, nowMs = Date.now()) {
+  const endedAt = state.endedAt ?? null;
+  const view = derive(state, endedAt ?? nowMs);
+  return {
+    id: `${view.start}:${endedAt ?? 0}`,
+    start: view.start,
+    endedAt,
+    laps: view.lapCount,
+    miles: view.totalMiles,
+    runMs: view.runMs,
+    totalMs: view.totalMs,
+    prize: state.prize ?? 0,
+  };
+}
+
+export function addToHistory(history, entry) {
+  if (!entry || !(entry.laps > 0)) return history;
+  return [entry, ...history.filter((item) => item.id !== entry.id)].slice(0, HISTORY_LIMIT);
+}
+
+export function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .flatMap((entry) => {
+        if (!entry || typeof entry !== 'object') return [];
+        const start = Number(entry.start);
+        const laps = Number(entry.laps);
+        if (!Number.isFinite(start) || !Number.isFinite(laps)) return [];
+        const endedAt =
+          entry.endedAt === null || entry.endedAt === undefined ? null : Number(entry.endedAt);
+        const miles = Number(entry.miles);
+        const runMs = Number(entry.runMs);
+        const totalMs = Number(entry.totalMs);
+        return [
+          {
+            id: String(entry.id ?? start),
+            start,
+            endedAt: Number.isFinite(endedAt) ? endedAt : null,
+            laps: Math.max(0, Math.round(laps)),
+            miles: Number.isFinite(miles) ? miles : Math.max(0, Math.round(laps)) * MILES_PER_LAP,
+            runMs: Number.isFinite(runMs) ? runMs : 0,
+            totalMs: Number.isFinite(totalMs) ? totalMs : 0,
+            prize: cleanPrize(entry.prize),
+          },
+        ];
+      })
+      .slice(0, HISTORY_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+export function saveHistory(list) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_LIMIT)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* shoes ------------------------------------------------------------------ */
+
 // Which pair a lap gets on its own: one pair for `every` laps, then the next in the list.
 export function autoShoeId(shoes, every, lapIndex) {
   if (!Array.isArray(shoes) || shoes.length === 0) return null;
@@ -267,6 +359,13 @@ export function derive(state, nowMs = Date.now()) {
   };
 }
 
+// Which minute mark a reminder belongs to: 5 down to 1 inside the last five
+// minutes of the hour, 0 when the hour is not closing.
+export function reminderMinute(msToHourEnd) {
+  if (!Number.isFinite(msToHourEnd) || msToHourEnd <= 0 || msToHourEnd > 5 * 60 * 1000) return 0;
+  return Math.max(1, Math.ceil(msToHourEnd / 60_000));
+}
+
 export function formatCountdownParts(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   return {
@@ -298,6 +397,11 @@ const DAY_FORMAT = new Intl.DateTimeFormat(undefined, {
   month: 'short',
 });
 const TIME_FORMAT = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const MONEY_FORMAT = new Intl.NumberFormat(undefined, {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+});
 
 // The start comes from the device's clock, so its label follows the device's locale.
 export function formatDay(ms) {
@@ -306,6 +410,10 @@ export function formatDay(ms) {
 
 export function formatTime(ms) {
   return TIME_FORMAT.format(new Date(ms));
+}
+
+export function formatMoney(amount) {
+  return MONEY_FORMAT.format(Number(amount) || 0);
 }
 
 // Rail label: the hour of the day, 24-hour, so the strip scans in order.
