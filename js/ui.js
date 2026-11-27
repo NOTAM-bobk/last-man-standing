@@ -9,15 +9,10 @@ import {
   formatDuration,
   formatHourShort,
   formatMmSs,
+  formatMoney,
   formatTime,
   pad2,
 } from './state.js';
-
-const MONEY_FORMAT = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-});
 
 const IDS = [
   'hero',
@@ -87,7 +82,7 @@ export function createUI(root = document) {
     refs.tapout.hidden = view.phase !== 'running';
     refs.purse.hidden = !(view.prize > 0);
     if (view.prize > 0) {
-      const amount = MONEY_FORMAT.format(view.prize);
+      const amount = formatMoney(view.prize);
       if (refs.purseAmount.textContent !== amount) refs.purseAmount.textContent = amount;
     }
     refs.hero.classList.toggle('is-ended', view.phase === 'ended');
@@ -287,12 +282,15 @@ export function createUI(root = document) {
     refs.scrim.hidden = false;
     appRoot?.setAttribute('inert', '');
     refs.scrim.addEventListener('keydown', trapTab);
+    refs.sheet.scrollTop = 0;
     requestAnimationFrame(() => {
       refs.scrim.classList.add('is-open');
+      refs.sheet.scrollTop = 0;
       const focusTarget =
         refs.sheetActions.querySelector('.sheet-btn--primary') ??
         refs.sheetActions.firstElementChild;
-      focusTarget?.focus();
+      // Keep the sheet at the top so the first field is the first thing you see.
+      focusTarget?.focus({ preventScroll: true });
     });
   }
 
