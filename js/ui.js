@@ -38,6 +38,9 @@ const IDS = [
   'sheetBody',
   'sheetContent',
   'sheetActions',
+  'alarm',
+  'alarmSub',
+  'alarmDisarm',
 ];
 
 export function createUI(root = document) {
