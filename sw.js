@@ -1,6 +1,6 @@
 // Offline-first shell cache. Bump VERSION whenever the files change so the
 // new worker installs, claims the page and replaces the old cache.
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `lms-${VERSION}`;
 
 const SHELL = [
@@ -10,6 +10,7 @@ const SHELL = [
   './app.js',
   './js/state.js',
   './js/ui.js',
+  './js/tips.js',
   './manifest.webmanifest',
   './icons/favicon.svg',
   './icons/icon-192.png',
