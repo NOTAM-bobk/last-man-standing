@@ -1,6 +1,6 @@
 // Offline-first shell cache. Bump VERSION whenever the files change so the
 // new worker installs, claims the page and replaces the old cache.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `lms-${VERSION}`;
 
 const SHELL = [
@@ -16,7 +16,6 @@ const SHELL = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon-180.png',
-  './fonts/space-grotesk-700.woff2',
 ];
 
 self.addEventListener('install', (event) => {
