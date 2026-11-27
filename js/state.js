@@ -1,10 +1,13 @@
-// Schedule math, persistence and formatting for the last-man-standing tracker.
+// Schedule math, shoe rotation, persistence and formatting for the tracker.
 // Everything here is pure except loadState/saveState, which touch localStorage.
 
-export const STATE_VERSION = 1;
-export const STORAGE_KEY = 'lms.v1';
+export const STATE_VERSION = 2;
+export const STORAGE_KEY = 'lms.v2';
+export const LEGACY_KEY = 'lms.v1';
 export const CADENCE_MS = 60 * 60 * 1000;
 export const MILES_PER_LAP = 3;
+export const MAX_EVERY = 4;
+const NAME_LIMIT = 28;
 
 export function pad2(value) {
   return String(Math.max(0, Math.floor(value))).padStart(2, '0');
@@ -38,22 +41,54 @@ export function defaultStart(fromMs = Date.now()) {
   return first > fromMs ? first : nextSaturdayStart(fromMs);
 }
 
-export function createState(startMs, { laps = [], endedAt = null } = {}) {
-  return { v: STATE_VERSION, start: startMs, laps, endedAt };
+export function newShoeId() {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  return `shoe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function defaultRotation() {
+  return { every: 1, pinnedShoeId: null };
+}
+
+export function createState(startMs, { laps = [], endedAt = null, shoes = [], rotation } = {}) {
+  return {
+    v: STATE_VERSION,
+    start: startMs,
+    laps,
+    endedAt,
+    shoes,
+    rotation: rotation ? { ...defaultRotation(), ...rotation } : defaultRotation(),
+  };
 }
 
 export function blankState(fromMs = Date.now()) {
   return createState(defaultStart(fromMs));
 }
 
-// Accepts only well-formed saved state, so a corrupt entry can never wedge the app.
+// Accepts v1 (no shoes) and v2 saved state, so an existing run survives the upgrade.
 export function sanitize(value) {
-  if (!value || typeof value !== 'object' || value.v !== STATE_VERSION) return null;
+  if (!value || typeof value !== 'object') return null;
+  if (value.v !== 1 && value.v !== STATE_VERSION) return null;
+
   const start = Number(value.start);
   if (!Number.isFinite(start)) return null;
 
   const endedAt = value.endedAt === null || value.endedAt === undefined ? null : Number(value.endedAt);
   if (endedAt !== null && !Number.isFinite(endedAt)) return null;
+
+  const shoes = [];
+  const shoeIds = new Set();
+  for (const raw of Array.isArray(value.shoes) ? value.shoes : []) {
+    if (!raw || typeof raw !== 'object') continue;
+    const id = typeof raw.id === 'string' ? raw.id.trim() : '';
+    const name =
+      typeof raw.name === 'string' ? raw.name.trim().replace(/\s+/g, ' ').slice(0, NAME_LIMIT) : '';
+    if (!id || !name || shoeIds.has(id)) continue;
+    shoeIds.add(id);
+    const addedAt = Number(raw.addedAt);
+    shoes.push({ id, name, addedAt: Number.isFinite(addedAt) ? addedAt : start });
+  }
 
   const seen = new Set();
   const laps = (Array.isArray(value.laps) ? value.laps : [])
@@ -65,24 +100,53 @@ export function sanitize(value) {
       if (!Number.isInteger(hour) || hour < 0 || !Number.isFinite(ms) || ms < 0) return [];
       if (seen.has(hour)) return [];
       seen.add(hour);
+      const shoeId = typeof lap.shoeId === 'string' && shoeIds.has(lap.shoeId) ? lap.shoeId : null;
       return [
         {
           hour,
           ms: Math.min(ms, CADENCE_MS),
           at: Number.isFinite(at) ? at : start + hour * CADENCE_MS,
+          shoeId,
         },
       ];
     })
     .sort((a, b) => a.hour - b.hour);
 
-  return { v: STATE_VERSION, start, laps, endedAt };
+  const rawRotation = value.rotation && typeof value.rotation === 'object' ? value.rotation : {};
+  const everyValue = Math.round(Number(rawRotation.every));
+  const every = Number.isFinite(everyValue)
+    ? Math.min(MAX_EVERY, Math.max(1, everyValue))
+    : 1;
+  const pinned =
+    typeof rawRotation.pinnedShoeId === 'string' && shoeIds.has(rawRotation.pinnedShoeId)
+      ? rawRotation.pinnedShoeId
+      : null;
+
+  return {
+    v: STATE_VERSION,
+    start,
+    laps,
+    endedAt,
+    shoes,
+    rotation: { every, pinnedShoeId: pinned },
+  };
 }
 
 export function loadState(fromMs = Date.now()) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return blankState(fromMs);
-    return sanitize(JSON.parse(raw)) ?? blankState(fromMs);
+    if (raw) return sanitize(JSON.parse(raw)) ?? blankState(fromMs);
+
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const migrated = sanitize(JSON.parse(legacy));
+      if (migrated) {
+        saveState(migrated);
+        localStorage.removeItem(LEGACY_KEY);
+        return migrated;
+      }
+    }
+    return blankState(fromMs);
   } catch {
     return blankState(fromMs);
   }
@@ -97,10 +161,40 @@ export function saveState(state) {
   }
 }
 
+// Which pair a lap gets on its own: one pair for `every` laps, then the next in the list.
+export function autoShoeId(shoes, every, lapIndex) {
+  if (!Array.isArray(shoes) || shoes.length === 0) return null;
+  const step = Math.floor(Math.max(0, lapIndex) / Math.max(1, every)) % shoes.length;
+  return shoes[step].id;
+}
+
+export function shoeForLap(state, lapIndex) {
+  const shoes = state.shoes ?? [];
+  const rotation = state.rotation ?? defaultRotation();
+  if (rotation.pinnedShoeId && shoes.some((shoe) => shoe.id === rotation.pinnedShoeId)) {
+    return rotation.pinnedShoeId;
+  }
+  return autoShoeId(shoes, rotation.every, lapIndex);
+}
+
+export function shoeStats(state) {
+  const counts = new Map();
+  for (const lap of state.laps ?? []) {
+    if (!lap.shoeId) continue;
+    counts.set(lap.shoeId, (counts.get(lap.shoeId) ?? 0) + 1);
+  }
+  return (state.shoes ?? []).map((shoe) => {
+    const laps = counts.get(shoe.id) ?? 0;
+    return { ...shoe, laps, miles: laps * MILES_PER_LAP };
+  });
+}
+
 export function derive(state, nowMs = Date.now()) {
   const start = state.start;
   const laps = state.laps;
   const endedAt = state.endedAt;
+  const shoes = state.shoes ?? [];
+  const rotation = state.rotation ?? defaultRotation();
 
   const prestart = endedAt === null && nowMs < start;
   const phase = endedAt !== null ? 'ended' : prestart ? 'prestart' : 'running';
@@ -117,6 +211,20 @@ export function derive(state, nowMs = Date.now()) {
   const msToHourEnd = hourIndex >= 0 ? Math.max(0, hourEnd - clock) : CADENCE_MS;
   const hourProgress =
     hourIndex >= 0 ? Math.min(1, Math.max(0, (clock - hourStart) / CADENCE_MS)) : 0;
+
+  const shoeUse = {};
+  for (const lap of laps) {
+    if (!lap.shoeId) continue;
+    shoeUse[lap.shoeId] = (shoeUse[lap.shoeId] ?? 0) + 1;
+  }
+
+  const pinnedShoeId =
+    rotation.pinnedShoeId && shoes.some((shoe) => shoe.id === rotation.pinnedShoeId)
+      ? rotation.pinnedShoeId
+      : null;
+  const activeShoeId =
+    pinnedShoeId ?? autoShoeId(shoes, rotation.every, laps.length);
+  const nextShoeId = pinnedShoeId ? null : autoShoeId(shoes, rotation.every, laps.length + 1);
 
   return {
     phase,
@@ -135,6 +243,12 @@ export function derive(state, nowMs = Date.now()) {
     msToStart,
     msToHourEnd,
     hourProgress,
+    shoes,
+    rotation,
+    pinnedShoeId,
+    activeShoeId,
+    nextShoeId,
+    shoeUse,
     // Rail starts here so a long run stays one comfortable strip.
     firstHour: Math.max(0, hourIndex - 11),
   };
