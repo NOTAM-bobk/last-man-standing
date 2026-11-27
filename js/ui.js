@@ -46,6 +46,26 @@ export function createUI(root = document) {
 
   const seen = { clock: null, lap: null, distance: null, run: null, total: null, rail: null };
 
+  const appRoot = root.querySelector('.app');
+  let lastFocused = null;
+
+  function trapTab(event) {
+    if (event.key !== 'Tab') return;
+    const items = [...refs.sheet.querySelectorAll('button, input, [href], textarea, select')].filter(
+      (el) => !el.disabled,
+    );
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   function setHtml(element, key, html) {
     if (seen[key] === html) return;
     seen[key] = html;
@@ -57,7 +77,7 @@ export function createUI(root = document) {
 
     refs.statusDot.className = `dot dot--${view.phase}`;
     refs.statusText.textContent = live ? 'Live' : view.phase === 'prestart' ? 'Starts soon' : 'Ended';
-    refs.startText.textContent = `${formatDay(view.start)} · ${formatTime(view.start)}`;
+    refs.startText.textContent = `Start ${formatDay(view.start)} · ${formatTime(view.start)}`;
     refs.tapout.hidden = !live;
     refs.hero.classList.toggle('is-ended', view.phase === 'ended');
 
@@ -100,8 +120,8 @@ export function createUI(root = document) {
             }`
           : `${view.lapCount} lap${view.lapCount === 1 ? '' : 's'} · ${view.totalMiles.toFixed(1)} mi`;
 
-    const progress = view.phase === 'ended' ? 1 : view.hourProgress;
-    refs.trackFill.style.width = `${Math.round(progress * 100)}%`;
+    const progress = view.phase === 'ended' ? 1 : Math.round(view.hourProgress * 1000) / 1000;
+    refs.trackFill.style.transform = `scaleX(${progress})`;
 
     refs.lap.classList.remove('lap--banked', 'lap--ghost');
     if (view.phase === 'prestart') {
@@ -171,15 +191,16 @@ export function createUI(root = document) {
         const isNow = view.phase === 'running' && hour === view.hourIndex;
         const chip = root.createElement('div');
         chip.className = `chip ${isNow ? 'chip--now' : lap ? 'chip--done' : 'chip--missed'}`;
-        chip.innerHTML = `<span class="chip-dot"></span><span class="chip-time">${formatHourShort(hourStart)}</span>`;
-        chip.title = `${formatTime(hourStart)} — ${lap ? `${formatDuration(lap.ms)} lap` : 'no lap'}`;
+        const chipState = isNow ? 'in progress' : lap ? `${formatDuration(lap.ms)} lap` : 'no lap';
+        chip.innerHTML = `<span class="chip-dot" aria-hidden="true"></span><span class="chip-time" aria-hidden="true">${formatHourShort(hourStart)}</span><span class="sr-only">${formatTime(hourStart)}, ${chipState}</span>`;
+        chip.title = `${formatTime(hourStart)} — ${chipState}`;
         fragment.append(chip);
       }
       refs.rail.replaceChildren(fragment);
       refs.rail.scrollLeft = refs.rail.scrollWidth;
     }
 
-    refs.railCount.textContent = `${view.lapCount} lap${view.lapCount === 1 ? '' : 's'} · ${view.totalMiles.toFixed(1)} mi`;
+    refs.railCount.textContent = `${view.lapCount} lap${view.lapCount === 1 ? '' : 's'}`;
   }
 
   function flash() {
@@ -191,9 +212,12 @@ export function createUI(root = document) {
   }
 
   function openSheet({ title, body = '', content = '', actions = [] }) {
+    lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     refs.sheetTitle.textContent = title;
     refs.sheetBody.textContent = body;
     refs.sheetBody.hidden = !body;
+    if (body) refs.sheet.setAttribute('aria-describedby', 'sheetBody');
+    else refs.sheet.removeAttribute('aria-describedby');
     refs.sheetContent.innerHTML = content;
     refs.sheetActions.replaceChildren();
 
@@ -207,6 +231,8 @@ export function createUI(root = document) {
     }
 
     refs.scrim.hidden = false;
+    appRoot?.setAttribute('inert', '');
+    refs.scrim.addEventListener('keydown', trapTab);
     requestAnimationFrame(() => {
       refs.scrim.classList.add('is-open');
       const focusTarget =
@@ -217,9 +243,13 @@ export function createUI(root = document) {
   }
 
   function closeSheet() {
+    refs.scrim.removeEventListener('keydown', trapTab);
     refs.scrim.classList.remove('is-open');
     setTimeout(() => {
       refs.scrim.hidden = true;
+      appRoot?.removeAttribute('inert');
+      if (lastFocused?.isConnected) lastFocused.focus();
+      lastFocused = null;
     }, 160);
   }
 

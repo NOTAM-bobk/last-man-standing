@@ -6,9 +6,6 @@ export const STORAGE_KEY = 'lms.v1';
 export const CADENCE_MS = 60 * 60 * 1000;
 export const MILES_PER_LAP = 3;
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 export function pad2(value) {
   return String(Math.max(0, Math.floor(value))).padStart(2, '0');
 }
@@ -168,17 +165,20 @@ export function formatDuration(ms) {
   return `${minutes}m ${pad2(seconds % 60)}s`;
 }
 
+const DAY_FORMAT = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+});
+const TIME_FORMAT = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+
+// The start comes from the device's clock, so its label follows the device's locale.
 export function formatDay(ms) {
-  const date = new Date(ms);
-  return `${DAY_NAMES[date.getDay()]} ${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
+  return DAY_FORMAT.format(new Date(ms));
 }
 
 export function formatTime(ms) {
-  const date = new Date(ms);
-  const hours = date.getHours();
-  const suffix = hours < 12 ? 'am' : 'pm';
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${hour12}:${pad2(date.getMinutes())} ${suffix}`;
+  return TIME_FORMAT.format(new Date(ms));
 }
 
 // Rail label: the hour of the day, 24-hour, so the strip scans in order.
