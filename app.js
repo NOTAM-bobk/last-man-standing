@@ -1,10 +1,12 @@
 import {
   CADENCE_MS,
+  MILES_PER_LAP,
   STORAGE_KEY,
   autoShoeId,
   createState,
   derive,
   formatDuration,
+  formatMmSs,
   formatTime,
   fromInputValue,
   loadState,
@@ -60,7 +62,80 @@ function finishLap() {
       rotation: state.rotation,
     }),
   );
+
+  const lap = state.laps[state.laps.length - 1];
   ui.flash();
+  showLap(lap, state.laps.length);
+}
+
+const GOGGINS_QUOTES = [
+  'Stay hard.',
+  "Who's gonna carry the boats?",
+  "Don't stop when you're tired. Stop when you're done.",
+  "When you think you're done, you're only at 40% of your body's capability.",
+  'You are in danger of living a life so comfortable and soft that you will die without ever realizing your true potential.',
+  'Be uncommon amongst uncommon people.',
+  'The most important conversation is the one you have with yourself.',
+  'You have to build calluses on your brain just like how you build calluses on your hands.',
+  'Suffering is the true test of life.',
+  'Motivation is crap. Motivation comes and goes. When you are driven, whatever is in front of you will get destroyed.',
+];
+
+let lastQuoteIndex = -1;
+
+function pickQuote() {
+  let index = Math.floor(Math.random() * GOGGINS_QUOTES.length);
+  if (GOGGINS_QUOTES.length > 1 && index === lastQuoteIndex) {
+    index = (index + 1) % GOGGINS_QUOTES.length;
+  }
+  lastQuoteIndex = index;
+  return GOGGINS_QUOTES[index];
+}
+
+function showLap(lap, number) {
+  if (!lap) return;
+  const view = derive(state, Date.now());
+  const pace = formatMmSs(lap.ms / MILES_PER_LAP);
+  const pair = shoeStats(state).find((shoe) => shoe.id === lap.shoeId) ?? null;
+  const quote = pickQuote();
+
+  ui.openSheet({
+    title: `Lap ${number} banked`,
+    content: `
+      <div class="lap-stats">
+        <div class="lap-stat">
+          <span class="stat-label">Lap time</span>
+          <strong>${formatMmSs(lap.ms)}</strong>
+        </div>
+        <div class="lap-stat">
+          <span class="stat-label">Avg pace</span>
+          <strong>${pace}<span class="unit">/mi</span></strong>
+        </div>
+        <div class="lap-stat">
+          <span class="stat-label">Total distance</span>
+          <strong>${view.totalMiles.toFixed(1)}<span class="unit">mi</span></strong>
+        </div>
+        <div class="lap-stat">
+          <span class="stat-label">Total time</span>
+          <strong>${formatDuration(view.totalMs)}</strong>
+        </div>
+        <div class="lap-stat lap-stat--wide">
+          <span class="stat-label">Shoe</span>
+          <strong>${pair ? escapeHtml(pair.name) : 'No pair'}</strong>
+          <span class="lap-stat-note">${
+            pair
+              ? `${pair.laps} lap${pair.laps === 1 ? '' : 's'} · ${pair.miles.toFixed(1)} mi on this pair`
+              : 'Add a pair in Shoes to track its miles'
+          }</span>
+        </div>
+      </div>
+      <blockquote class="quote">
+        <p>${escapeHtml(quote)}</p>
+        <footer>David Goggins</footer>
+      </blockquote>
+    `,
+    actions: [{ label: 'Keep going', variant: 'primary', onClick: ui.closeSheet }],
+  });
 }
 
 function tapOut() {
