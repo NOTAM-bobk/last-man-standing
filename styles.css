@@ -329,6 +329,68 @@ body {
   text-align: center;
 }
 
+/* shoe pill */
+.shoe {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  padding: 11px 14px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+.shoe:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 rgba(244, 241, 234, 0.09);
+}
+
+.shoe-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.shoe-kicker {
+  font: 500 10.5px/1 var(--body);
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
+.shoe-name {
+  font: 700 14.5px/1.15 var(--display);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shoe-meta {
+  font: 500 11px/1.35 var(--body);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shoe-chev {
+  flex: 0 0 auto;
+  color: var(--dim);
+  font-size: 20px;
+  line-height: 1;
+}
+
 /* stats */
 .stats {
   display: grid;
@@ -438,6 +500,23 @@ body {
   align-items: center;
   gap: 6px;
   width: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+button.chip {
+  cursor: pointer;
+}
+
+button.chip .chip-dot {
+  transition: border-color 0.12s ease;
+}
+
+button.chip:hover .chip-dot {
+  border-color: var(--soft);
 }
 
 .chip-dot {
@@ -489,12 +568,13 @@ body {
 }
 
 .foot {
-  margin-top: 4px;
-  font-size: 11px;
-  letter-spacing: 0.01em;
-  color: var(--dim);
+  margin-top: 6px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
   text-align: center;
-  text-wrap: pretty;
 }
 
 /* sheet */
@@ -520,6 +600,9 @@ body {
 .sheet {
   width: 100%;
   max-width: 400px;
+  max-height: min(86dvh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 22px;
   border: 2px solid var(--line);
   border-radius: 28px;
@@ -634,6 +717,150 @@ body {
 
 .hint--warn {
   color: var(--coral);
+}
+
+/* shoes sheet */
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.seg-btn {
+  min-height: 38px;
+  padding: 0 6px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--soft);
+  font: 600 11.5px/1 var(--body);
+  cursor: pointer;
+}
+
+.seg-btn.is-on {
+  border-color: var(--accent);
+  background: rgba(199, 246, 75, 0.1);
+  color: var(--accent);
+}
+
+.shoe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shoe-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.shoe-item.is-pinned {
+  border-color: var(--accent);
+}
+
+.shoe-item--warn {
+  flex-wrap: wrap;
+  border-color: rgba(255, 106, 61, 0.5);
+  background: rgba(255, 106, 61, 0.08);
+}
+
+.shoe-pick {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.shoe-pick .shoe-name {
+  white-space: normal;
+}
+
+.shoe-act {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--soft);
+  font: 600 11px/1 var(--body);
+  cursor: pointer;
+}
+
+.shoe-act--del {
+  border-color: rgba(255, 106, 61, 0.35);
+  color: var(--coral-ink);
+}
+
+.shoe-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.shoe-item--warn .shoe-text {
+  flex: 1 1 100%;
+}
+
+.field--tight {
+  padding: 10px 12px;
+  border-width: 1.5px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.add-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid #000;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #0a0a0c;
+  font: 700 11.5px/1 var(--body);
+  cursor: pointer;
+}
+
+.lap-shoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.lap-shoe {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--soft);
+  font: 600 12px/1 var(--body);
+  cursor: pointer;
+}
+
+.lap-shoe.is-on {
+  border-color: var(--accent);
+  background: rgba(199, 246, 75, 0.1);
+  color: var(--accent);
 }
 
 @media (min-height: 780px) {
