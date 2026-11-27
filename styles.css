@@ -80,6 +80,7 @@
 html,
 body {
   margin: 0;
+  overflow-x: clip;
 }
 
 body {
@@ -184,24 +185,29 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 15px;
-  border: 2px solid var(--accent-text);
-  border-radius: 16px;
-  background: var(--accent-wash);
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
 }
 
 .purse-label {
-  font: 500 11px/1 var(--body);
+  font: 500 10.5px/1 var(--body);
   letter-spacing: 0.01em;
   color: var(--muted);
 }
 
 .purse-amount {
-  font: 700 20px/1 var(--display);
-  letter-spacing: -0.02em;
-  color: var(--accent-text);
+  min-width: 0;
+  overflow: hidden;
+  font: 700 14px/1 var(--display);
+  letter-spacing: -0.01em;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @keyframes pulse {
@@ -254,7 +260,6 @@ body {
   margin: 0 0.06em 0 0.02em;
   font-size: 0.44em;
   letter-spacing: 0;
-  opacity: 0.72;
   vertical-align: 0.14em;
 }
 
@@ -419,7 +424,7 @@ body {
 /* stats */
 .stats {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -448,9 +453,10 @@ body {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  min-width: 0;
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(19px, 5.6vw, 23px);
+  font-size: clamp(17px, 5.2vw, 23px);
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
@@ -465,7 +471,7 @@ body {
 }
 
 .stat--distance .stat-num {
-  font-size: clamp(23px, 6.4vw, 27px);
+  font-size: clamp(21px, 6vw, 27px);
 }
 
 .stat.is-pop {
@@ -506,6 +512,7 @@ body {
   gap: 7px;
   padding: 2px 2px 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -903,6 +910,8 @@ button.chip:hover .chip-dot {
 
 .field {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 13px 14px;
   border: 2px solid var(--line);
   border-radius: 16px;
@@ -973,10 +982,13 @@ button.chip:hover .chip-dot {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
 }
 
 .history-when {
+  min-width: 0;
   font: 600 12.5px/1.2 var(--body);
   color: var(--ink);
 }
@@ -1139,6 +1151,20 @@ button.chip:hover .chip-dot {
   border-color: var(--accent-text);
   background: var(--accent-wash);
   color: var(--accent-text);
+}
+
+@media (max-width: 360px) {
+  .stats {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .stat--distance {
+    grid-column: 1 / -1;
+  }
+
+  .stat {
+    padding: 12px 12px 14px;
+  }
 }
 
 @media (min-height: 780px) {
