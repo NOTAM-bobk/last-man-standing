@@ -93,7 +93,6 @@ body {
 
 .tapout {
   flex: 0 0 auto;
-  margin-top: 2px;
   min-height: 32px;
   padding: 8px 13px;
   border: 1.5px solid rgba(255, 106, 61, 0.45);
@@ -113,31 +112,16 @@ body {
   background: rgba(255, 106, 61, 0.16);
 }
 
-/* meta row */
-.meta {
+/* topbar actions */
+.topbar-actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-#statusText {
-  color: var(--soft);
-}
-
-.meta-sep {
-  opacity: 0.45;
-}
-
-#startText {
-  color: var(--soft);
-  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
 }
 
 .edit {
-  margin-left: auto;
   min-height: 30px;
   padding: 7px 12px;
   border: 1.5px solid var(--line);
@@ -151,24 +135,6 @@ body {
 
 .edit:active {
   transform: scale(0.96);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--dim);
-}
-
-.dot--running {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(199, 246, 75, 0.14);
-  animation: pulse 2.4s ease-in-out infinite;
-}
-
-.dot--ended {
-  background: var(--coral);
 }
 
 @keyframes pulse {
@@ -319,14 +285,6 @@ body {
   background: transparent;
   color: var(--ink);
   box-shadow: none;
-}
-
-.lap-note {
-  min-height: 16px;
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
 }
 
 /* shoe pill */
@@ -668,6 +626,70 @@ button.chip:hover .chip-dot {
   border-color: rgba(255, 106, 61, 0.55);
   background: rgba(255, 106, 61, 0.12);
   color: var(--coral-ink);
+}
+
+.lap-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.lap-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.lap-stat--wide {
+  grid-column: 1 / -1;
+}
+
+.lap-stat strong {
+  font: 700 18px/1.1 var(--display);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lap-stat strong .unit {
+  margin-left: 3px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lap-stat-note {
+  font: 500 11px/1.4 var(--body);
+  color: var(--muted);
+}
+
+.quote {
+  margin: 16px 0 0;
+  padding: 13px 15px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px 14px 14px 4px;
+  background: rgba(199, 246, 75, 0.07);
+}
+
+.quote p {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.quote footer {
+  margin-top: 8px;
+  font: 500 11px/1 var(--body);
+  letter-spacing: 0.01em;
+  color: var(--muted);
 }
 
 .field-label {
