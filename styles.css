@@ -137,6 +137,31 @@ body {
   transform: scale(0.96);
 }
 
+/* prize purse */
+.purse {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  background: rgba(199, 246, 75, 0.08);
+}
+
+.purse-label {
+  font: 500 11px/1 var(--body);
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
+.purse-amount {
+  font: 700 20px/1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes pulse {
   0%,
   100% {
@@ -526,13 +551,23 @@ button.chip:hover .chip-dot {
 }
 
 .foot {
-  margin-top: 6px;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.foot-mark {
+  display: inline-block;
+  padding: 9px 14px;
+  border: 2px solid #000;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #0a0a0c;
+  font: 700 14px/1 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 #000;
+  transform: rotate(-1.5deg);
 }
 
 /* alarm */
@@ -763,6 +798,45 @@ button.chip:hover .chip-dot {
   font: 500 11px/1 var(--body);
   letter-spacing: 0.01em;
   color: var(--muted);
+}
+
+.coach {
+  margin-top: 18px;
+}
+
+.coach .field-label {
+  margin: 0 0 8px;
+}
+
+.tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.tip-kind {
+  font: 600 10.5px/1 var(--body);
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--accent);
+}
+
+.tip-text {
+  font: 500 12.5px/1.45 var(--body);
+  color: var(--soft);
 }
 
 .field-label {
