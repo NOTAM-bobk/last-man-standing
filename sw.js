@@ -1,6 +1,6 @@
 // Offline-first shell cache. Bump VERSION whenever the files change so the
 // new worker installs, claims the page and replaces the old cache.
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE = `lms-${VERSION}`;
 
 const SHELL = [
@@ -35,6 +35,19 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys();
       await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
       await self.clients.claim();
+    })(),
+  );
+});
+
+// Lap reminders open the app instead of stacking up as free-floating notices.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const focused = windows.find((client) => 'focus' in client);
+      if (focused) return focused.focus();
+      if (self.clients.openWindow) return self.clients.openWindow('./');
     })(),
   );
 });
