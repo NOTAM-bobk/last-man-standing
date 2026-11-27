@@ -13,8 +13,16 @@ import {
   pad2,
 } from './state.js';
 
+const MONEY_FORMAT = new Intl.NumberFormat(undefined, {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+});
+
 const IDS = [
   'hero',
+  'purse',
+  'purseAmount',
   'editStart',
   'tapout',
   'heroLabel',
@@ -77,6 +85,11 @@ export function createUI(root = document) {
 
   function render(view) {
     refs.tapout.hidden = view.phase !== 'running';
+    refs.purse.hidden = !(view.prize > 0);
+    if (view.prize > 0) {
+      const amount = MONEY_FORMAT.format(view.prize);
+      if (refs.purseAmount.textContent !== amount) refs.purseAmount.textContent = amount;
+    }
     refs.hero.classList.toggle('is-ended', view.phase === 'ended');
 
     refs.heroLabel.textContent =
